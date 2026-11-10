@@ -1,18 +1,43 @@
 import requests
 import time
+import os
+import uuid
+import hashlib
+import psycopg
+from dotenv import load_dotenv
+from datetime import datetime, timezone
+from psycopg.types.json import Jsonb
 
 url = 'https://www.cheapshark.com/api/1.0/deals'
 
-# curl -sSf -A "local-data-platform/0.1 (github.com/alpett/local-data-platform)" "https://www.cheapshark.com/api/1.0/deals?pageSize=60"
+# curl -sSf -A "local-data-platform/0.1 (github.com/alpett/local-data-platform)" "https://www.cheapshark.com/api/1.0/deals?upperPrice=0"
 # curl -sSf -A "local-data-platform/0.1 (github.com/alpett/local-data-platform)" "https://www.cheapshark.com/api/1.0/stores?"
-# Steam (1), GOG (7), Epic Games Store (25) and Humble Store (11)
 
-stores = [7]
+# Steam (1), GOG (7), Epic Games Store (25) and Humble Store (11)
+stores = [1, 7, 25, 11]
+
+# Set the page size
 page_size = 60
 
 headers = {'user-agent': 'local-data-platform/0.1 (github.com/alpett/local-data-platform)'}
 
-bands = [(0, 5), (5, 10), (10, 20), (20, 40)]
+# Define the price bands (lower price, upper price)
+bands = [(0, 1), (1, 2), (2, 3), (3, 5), (5, 10), (10, 20), (20, 40)]
+
+# Load postgres credentials and define connection parameters
+load_dotenv()
+conn = psycopg.connect(host="127.0.0.1", port=5432, dbname=os.environ["POSTGRES_DB"], user=os.environ["POSTGRES_USER"], password=os.environ["POSTGRES_PASSWORD"])
+
+# Define a run id as uuid
+run_id = uuid.uuid4()
+
+# Define SQL query with placeholder values (%s)
+sql = """
+insert into landing.cheapshark_deals
+(run_id, request_url, request_params, http_status, fetched_at, payload, payload_hash)
+values (%s, %s, %s, %s, %s, %s, %s)
+"""
+
 
 for s in stores:
     for lower, upper in bands:
@@ -42,3 +67,7 @@ for s in stores:
             time.sleep(2)
         else:
             print(f"store {s}, band {lower}-{upper}: hit page 50, truncated")
+
+
+# Close the conection
+conn.close()
