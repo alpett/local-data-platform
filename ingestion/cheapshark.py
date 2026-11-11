@@ -52,10 +52,24 @@ for s in stores:
                       'pageSize' : page_size
                     }
             r = requests.get(url, headers = headers, timeout=10, params = params)
+            fetched_at = datetime.now(timezone.utc)
+            if r.status_code == 200:
+                deals = r.json() # define deals to not reparse json every time with r.json()
+                payload = Jsonb(deals)
+                payload_hash = hashlib.sha256(r.content).hexdigest() # Hash of the content otherwise payload and the hash are None
+
+            else:
+                payload = None
+                payload_hash = None
+
+            conn.execute(sql, (run_id, r.url, Jsonb(params), r.status_code, fetched_at, payload, payload_hash))
+            conn.commit()
+
+            # Repeat the if to break the loop, the first if is to save the results
             if r.status_code != 200:
                 print(f"store {s}, band {lower}-{upper}, page {p}: status {r.status_code}")
                 break
-            deals = r.json() # define deals to not reparse json every time with r.json()
+
             if len(deals) == 0:
                 print(f"store {s}, band {lower}-{upper}, page {p}: no deals")
                 break
@@ -67,6 +81,9 @@ for s in stores:
             time.sleep(2)
         else:
             print(f"store {s}, band {lower}-{upper}: hit page 50, truncated")
+
+        
+
 
 
 # Close the conection
