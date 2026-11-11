@@ -51,7 +51,14 @@ for s in stores:
                       'storeID' : s,
                       'pageSize' : page_size
                     }
-            r = requests.get(url, headers = headers, timeout=10, params = params)
+            for attempt in range(3):
+                try:
+                    r = requests.get(url, headers = headers, timeout=(5,30), params = params)
+                    break # success: leave the retry loop
+                except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+                    if attempt == 2: # This is the last attempt: give up
+                        raise
+                    time.sleep(2 * (attempt + 1)) # First sleep is 2 seconds, then 4
             fetched_at = datetime.now(timezone.utc)
             if r.status_code == 200:
                 deals = r.json() # define deals to not reparse json every time with r.json()
