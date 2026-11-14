@@ -1,0 +1,12 @@
+game_deals:
+  outputs:
+    dev:
+      dbname: ldp
+      host: 127.0.0.1
+      pass: "{{ env_var('POSTGRES_PASSWORD') }}"
+      port: 5432
+      schema: staging
+      threads: 5
+      type: postgres
+      user: ldp
+  target: dev
