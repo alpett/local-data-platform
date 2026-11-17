@@ -16,12 +16,17 @@ hashed_columns:
         is_hashdiff: true
         columns:
             - store_id
-            - internal_name
-            - title
             - sale_price
             - normal_price
             - is_on_sale
             - savings
+            - last_change
+            - deal_rating
+    hd_game_s:
+        is_hashdiff: true
+        columns:
+            - internal_name
+            - title
             - metacritic_score
             - metacritic_link
             - steam_rating_text
@@ -29,8 +34,6 @@ hashed_columns:
             - steam_rating_count
             - steam_app_id
             - release_date
-            - last_change
-            - deal_rating
             - thumb
 {%- endset -%}
 
