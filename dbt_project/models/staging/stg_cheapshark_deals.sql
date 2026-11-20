@@ -21,7 +21,12 @@ hashed_columns:
             - is_on_sale
             - savings
             - last_change
+
+    hd_deal_rating_s:
+        is_hashdiff: true
+        columns:
             - deal_rating
+            
     hd_game_s:
         is_hashdiff: true
         columns:
