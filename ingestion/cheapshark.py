@@ -7,6 +7,7 @@ import psycopg
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 from psycopg.types.json import Jsonb
+import sys
 
 url = 'https://www.cheapshark.com/api/1.0/deals'
 
@@ -41,7 +42,7 @@ values (%s, %s, %s, %s, %s, %s, %s)
 
 for s in stores:
     for lower, upper in bands:
-        # pages 0-50 are valid; page 51 returns HTTP 400 (API cap, ~3,060 rows per query)
+        # Pages 0-50 are valid; page 51 returns HTTP 400 (API cap, ~3,060 rows per query)
         for p in range(0, 51):
             params = {'lowerPrice': lower,
                       'upperPrice': upper, 
@@ -53,15 +54,16 @@ for s in stores:
                     }
             for attempt in range(3):
                 try:
-                    r = requests.get(url, headers = headers, timeout=(5,30), params = params)
-                    break # success: leave the retry loop
+                    r = requests.get(url, headers=headers, timeout=(5, 30), params=params)
+                    if not (r.status_code >= 500 or r.status_code == 408) or attempt == 2:
+                        break  # 200, any other 4xx, or last attempt: keep this response
                 except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
-                    if attempt == 2: # This is the last attempt: give up
+                    if attempt == 2:  # no response to save, give up
                         raise
-                    time.sleep(2 * (attempt + 1)) # First sleep is 2 seconds, then 4
+                time.sleep(5 * (attempt + 1))  # Waits 5 seconds, then 10
             fetched_at = datetime.now(timezone.utc)
             if r.status_code == 200:
-                deals = r.json() # define deals to not reparse json every time with r.json()
+                deals = r.json() # Define deals to not reparse json every time with r.json()
                 payload = Jsonb(deals)
                 payload_hash = hashlib.sha256(r.content).hexdigest() # Hash of the content otherwise payload and the hash are None
 
@@ -74,8 +76,7 @@ for s in stores:
 
             # Repeat the if to break the loop, the first if is to save the results
             if r.status_code != 200:
-                print(f"store {s}, band {lower}-{upper}, page {p}: status {r.status_code}")
-                break
+                sys.exit(f"store {s}, band {lower}-{upper}, page {p}: status {r.status_code}, run stopped")
 
             if len(deals) == 0:
                 print(f"store {s}, band {lower}-{upper}, page {p}: no deals")
@@ -91,6 +92,44 @@ for s in stores:
 
         
 
+
+url = 'https://www.cheapshark.com/api/1.0/stores'
+
+# Define SQL query with placeholder values (%s)
+sql = """
+insert into landing.cheapshark_stores
+(run_id, request_url, request_params, http_status, fetched_at, payload, payload_hash)
+values (%s, %s, %s, %s, %s, %s, %s)
+"""
+
+for attempt in range(3):
+    try:
+        r = requests.get(url, headers=headers, timeout=(5, 30))
+        if not (r.status_code >= 500 or r.status_code == 408) or attempt == 2:
+            break  # 200, any other 4xx, or last attempt: keep this response
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+        if attempt == 2:  # No response to save, so give up
+            raise
+    time.sleep(5 * (attempt + 1))  # Waits 5 seconds, then 10
+
+fetched_at = datetime.now(timezone.utc)
+if r.status_code == 200:
+    stores_data = r.json() # define stores to not reparse json every time with r.json()
+    payload = Jsonb(stores_data)
+    payload_hash = hashlib.sha256(r.content).hexdigest() # Hash of the content otherwise payload and the hash are None
+    print(len(stores_data))
+    print(stores_data[0])
+else:
+    payload = None
+    payload_hash = None
+
+print(r.status_code)
+
+conn.execute(sql, (run_id, r.url, Jsonb({}), r.status_code, fetched_at, payload, payload_hash))
+conn.commit()
+
+if r.status_code != 200:
+    sys.exit(f"stores: status {r.status_code}, run stopped")
 
 
 # Close the conection
