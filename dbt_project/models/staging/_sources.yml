@@ -5,3 +5,4 @@ sources:
     schema: landing
     tables:
       - name: cheapshark_deals
+      - name: cheapshark_stores
