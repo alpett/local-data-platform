@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: deal_rts
+    description: "Record tracking satellite of the deal hub. One row every time a deal appears in a run, used to see when a deal was present or absent."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - hk_deal_h
+              - ldts
+    columns:
+      - name: hk_deal_h
+        description: "Hash key of the tracked deal (deal_h)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('deal_h')
+                field: hk_deal_h
+      - name: rsrc
+        description: "Record source (cheapshark_deals_api)."
+        data_tests:
+          - not_null
+      - name: ldts
+        description: "Load date of the run in which the deal appeared."
+        data_tests:
+          - not_null

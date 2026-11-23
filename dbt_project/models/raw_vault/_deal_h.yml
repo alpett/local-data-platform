@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: deal_h
+    description: "Hub of CheapShark deals. One row per distinct dealID, plus two ghost records."
+    columns:
+      - name: hk_deal_h
+        description: "Hash key (MD5) of the business key deal_id."
+        data_tests:
+          - unique
+          - not_null
+      - name: deal_id
+        description: "Business key: dealID as delivered by the CheapShark API."
+        data_tests:
+          - unique
+          - not_null
+      - name: ldts
+        description: "Load date: when the deal was first seen (minimum fetched_at of the run)."
+        data_tests:
+          - not_null
+      - name: rsrc
+        description: "Record source of the first load (cheapshark_deals_api)."
+        data_tests:
+          - not_null

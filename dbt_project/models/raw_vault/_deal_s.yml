@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: deal_s
+    description: "Satellite of the deal hub. A new row is added each time one of the descriptive attributes changes for a deal. Deal rating is in deal_rating_s."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - hk_deal_h
+              - ldts
+    columns:
+      - name: hk_deal_h
+        description: "Hash key of the parent hub (deal_h)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('deal_h')
+                field: hk_deal_h
+      - name: hd_deal_s
+        description: "Hashdiff of the descriptive attributes, used to detect changes between runs."
+        data_tests:
+          - not_null
+      - name: rsrc
+        description: "Record source (cheapshark_deals_api)."
+        data_tests:
+          - not_null
+      - name: ldts
+        description: "Load date: when this version of the deal was fetched."
+        data_tests:
+          - not_null
+      - name: store_id
+        description: "CheapShark store identifier (reference table store_rt)."
+      - name: sale_price
+        description: "Current price in USD."
+      - name: normal_price
+        description: "Regular price in USD, before the discount."
+      - name: is_on_sale
+        description: "Whether the deal is on sale. Always 1 in the data so far, because the ingestion requests onSale=1."
+      - name: savings
+        description: "Discount percentage, delivered by the API with 6 decimals."
+      - name: last_change
+        description: "Last change of the deal as reported by CheapShark."

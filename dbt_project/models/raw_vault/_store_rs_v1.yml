@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: store_rs_v1
+    description: "Reference satellite (v1, view) on top of store_rs_v0. It adds the load end date, so every version has a validity interval."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - store_id
+              - ldts
+    columns:
+      - name: store_id
+        description: "Reference key of the parent reference hub (store_rh)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('store_rh')
+                field: store_id
+      - name: hd_store_rs
+        description: "Hashdiff of store_name and is_active."
+      - name: rsrc
+        description: "Record source (cheapshark_stores_api)."
+      - name: ldts
+        description: "Load date: start of validity of this version."
+        data_tests:
+          - not_null
+      - name: ledts
+        description: "Load end date: end of validity of this version. The current version has the end-of-time date."
+        data_tests:
+          - not_null
+      - name: store_name
+        description: "Name of the store."
+      - name: is_active
+        description: "1 if CheapShark currently tracks the store, 0 otherwise."

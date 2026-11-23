@@ -1,0 +1,52 @@
+version: 2
+
+models:
+  - name: game_s
+    description: "Satellite of the game hub with the attributes of the game (not of the deal). A new row is added each time one of them changes."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - hk_game_h
+              - ldts
+    columns:
+      - name: hk_game_h
+        description: "Hash key of the parent hub (game_h)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('game_h')
+                field: hk_game_h
+      - name: hd_game_s
+        description: "Hashdiff of the descriptive attributes, used to detect changes between runs."
+        data_tests:
+          - not_null
+      - name: rsrc
+        description: "Record source (cheapshark_deals_api)."
+        data_tests:
+          - not_null
+      - name: ldts
+        description: "Load date: when this version of the game was fetched."
+        data_tests:
+          - not_null
+      - name: internal_name
+        description: "CheapShark internal name of the game."
+      - name: title
+        description: "Title of the game."
+      - name: metacritic_score
+        description: "Metacritic score. 0 in the API means not available."
+      - name: metacritic_link
+        description: "Path of the Metacritic page of the game."
+      - name: steam_rating_text
+        description: "Steam rating as text (for example Very Positive)."
+      - name: steam_rating_percent
+        description: "Percentage of positive Steam reviews."
+      - name: steam_rating_count
+        description: "Number of Steam reviews."
+      - name: steam_app_id
+        description: "Steam application id. Null for many games that are not on Steam. It can't be the business key."
+      - name: release_date
+        description: "Release date of the game. 0 in the API means unknown."
+      - name: thumb
+        description: "URL of the game thumbnail."

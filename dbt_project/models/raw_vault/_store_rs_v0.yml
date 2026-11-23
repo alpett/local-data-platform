@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: store_rs_v0
+    description: "Reference satellite (v0, incremental table) with the attributes of the stores. A new row is added when store_name or is_active change."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - store_id
+              - ldts
+    columns:
+      - name: store_id
+        description: "Reference key of the parent reference hub (store_rh)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('store_rh')
+                field: store_id
+      - name: hd_store_rs
+        description: "Hashdiff of store_name and is_active, used to detect changes between runs."
+        data_tests:
+          - not_null
+      - name: rsrc
+        description: "Record source (cheapshark_stores_api)."
+        data_tests:
+          - not_null
+      - name: ldts
+        description: "Load date: when this version of the store was fetched."
+        data_tests:
+          - not_null
+      - name: store_name
+        description: "Name of the store."
+      - name: is_active
+        description: "1 if CheapShark currently tracks the store, 0 otherwise."

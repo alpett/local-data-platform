@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: game_h
+    description: "Hub of games. One row per distinct CheapShark gameID, plus two ghost records."
+    columns:
+      - name: hk_game_h
+        description: "Hash key (MD5) of the business key game_id."
+        data_tests:
+          - unique
+          - not_null
+      - name: game_id
+        description: "Business key: gameID as delivered by the CheapShark API. It identifies the game across all stores."
+        data_tests:
+          - unique
+          - not_null
+      - name: ldts
+        description: "Load date: when the game was first seen."
+        data_tests:
+          - not_null
+      - name: rsrc
+        description: "Record source of the first load (cheapshark_deals_api)."
+        data_tests:
+          - not_null

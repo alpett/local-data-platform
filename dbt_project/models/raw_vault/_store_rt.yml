@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: store_rt
+    description: "Reference table of stores (view). It shows each store as it was at the latest load date of store_rs_v1: store_rh joined to the version of store_rs_v1 valid on that date."
+    columns:
+      - name: store_id
+        description: "Store identifier, as in the API (text)."
+        data_tests:
+          - unique
+          - not_null
+      - name: ldts
+        description: "Snapshot date: the most recent load date in store_rs_v1. The same value on every row."
+        data_tests:
+          - not_null
+      - name: rsrc
+        description: "Record source of the store in the reference hub (store_rh)."
+        data_tests:
+          - not_null
+      - name: store_name
+        description: "Name of the store at the snapshot date."
+      - name: is_active
+        description: "1 if CheapShark tracked the store at the snapshot date, 0 otherwise."

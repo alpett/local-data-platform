@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: deal_rating_s
+    description: "Satellite of the deal hub with the CheapShark deal rating only. Kept separate from deal_s because the rating changes at almost every run, while prices change rarely."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - hk_deal_h
+              - ldts
+    columns:
+      - name: hk_deal_h
+        description: "Hash key of the parent hub (deal_h)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('deal_h')
+                field: hk_deal_h
+      - name: hd_deal_rating_s
+        description: "Hashdiff of the deal rating, used to detect changes between runs."
+        data_tests:
+          - not_null
+      - name: rsrc
+        description: "Record source (cheapshark_deals_api)."
+        data_tests:
+          - not_null
+      - name: ldts
+        description: "Load date: when this rating was fetched."
+        data_tests:
+          - not_null
+      - name: deal_rating
+        description: "Score from 0 to 10 calculated by CheapShark."

@@ -1,0 +1,19 @@
+version: 2
+
+models:
+  - name: store_rh
+    description: "Reference hub of CheapShark stores. One row per distinct storeID, plus two ghost records."
+    columns:
+      - name: store_id
+        description: "Business key: storeID as delivered by the CheapShark API (kept as text)."
+        data_tests:
+          - unique
+          - not_null
+      - name: ldts
+        description: "Load date: when the store was first seen."
+        data_tests:
+          - not_null
+      - name: rsrc
+        description: "Record source of the first load (cheapshark_stores_api)."
+        data_tests:
+          - not_null

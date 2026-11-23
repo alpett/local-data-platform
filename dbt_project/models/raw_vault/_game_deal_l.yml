@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: game_deal_l
+    description: "Link between games and deals. One row per distinct game and deal pair."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - hk_game_h
+              - hk_deal_h
+    columns:
+      - name: hk_game_deal_l
+        description: "Hash key (MD5) of the combination of game_id and deal_id."
+        data_tests:
+          - unique
+          - not_null
+      - name: hk_game_h
+        description: "Hash key of the game hub (game_h)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('game_h')
+                field: hk_game_h
+      - name: hk_deal_h
+        description: "Hash key of the deal hub (deal_h)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('deal_h')
+                field: hk_deal_h
+      - name: ldts
+        description: "Load date: when the pair was first seen."
+        data_tests:
+          - not_null
+      - name: rsrc
+        description: "Record source of the first load (cheapshark_deals_api)."
+        data_tests:
+          - not_null
