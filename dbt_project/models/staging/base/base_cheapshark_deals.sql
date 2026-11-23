@@ -2,6 +2,8 @@ select
     l.run_id,
     min(l.fetched_at) over (partition by l.run_id)                   as load_ts,
     'cheapshark_deals_api'                                           as record_source,
+    l.id                                                             as landing_id,
+    l.fetched_at                                                     as fetched_at,
 
     -- business keys (kept as text on purpose)
     d.deal ->> 'dealID'                                              as deal_id,
