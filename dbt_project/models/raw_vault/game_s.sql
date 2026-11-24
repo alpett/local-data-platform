@@ -14,7 +14,7 @@ src_payload:
     - steam_app_id
     - release_date
     - thumb  
-source_model: 'stg_cheapshark_deals'
+source_model: 'stg_cheapshark_games'
 {%- endset -%}    
 
 {{ datavault4dbt.sat_v0(yaml_metadata=yaml_metadata) }}

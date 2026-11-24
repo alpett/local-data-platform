@@ -26,20 +26,6 @@ hashed_columns:
         is_hashdiff: true
         columns:
             - deal_rating
-            
-    hd_game_s:
-        is_hashdiff: true
-        columns:
-            - internal_name
-            - title
-            - metacritic_score
-            - metacritic_link
-            - steam_rating_text
-            - steam_rating_percent
-            - steam_rating_count
-            - steam_app_id
-            - release_date
-            - thumb
 {%- endset -%}
 
 {{ datavault4dbt.stage(yaml_metadata=yaml_metadata) }}

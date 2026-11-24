@@ -3,7 +3,7 @@
 {%- set yaml_metadata -%}
 tracked_hashkey: hk_game_h
 source_models:
-    - name: stg_cheapshark_deals
+    - name: stg_cheapshark_games
       rsrc_static: cheapshark_deals_api
 {%- endset -%}    
 
