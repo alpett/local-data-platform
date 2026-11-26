@@ -11,9 +11,6 @@ import sys
 
 url = 'https://www.cheapshark.com/api/1.0/deals'
 
-# curl -sSf -A "local-data-platform/0.1 (github.com/alpett/local-data-platform)" "https://www.cheapshark.com/api/1.0/deals?upperPrice=0"
-# curl -sSf -A "local-data-platform/0.1 (github.com/alpett/local-data-platform)" "https://www.cheapshark.com/api/1.0/stores?"
-
 # Steam (1), GOG (7), Epic Games Store (25) and Humble Store (11)
 stores = [1, 7, 25, 11]
 
@@ -25,6 +22,8 @@ headers = {'user-agent': 'local-data-platform/0.1 (github.com/alpett/local-data-
 # Define the price bands (lower price, upper price)
 bands = [(0, 1), (1, 2), (2, 3), (3, 5), (5, 10), (10, 20), (20, 40)]
 
+request_delay = 15
+
 # Load postgres credentials and define connection parameters
 load_dotenv()
 conn = psycopg.connect(host="127.0.0.1", port=5432, dbname=os.environ["POSTGRES_DB"], user=os.environ["POSTGRES_USER"], password=os.environ["POSTGRES_PASSWORD"])
@@ -32,12 +31,43 @@ conn = psycopg.connect(host="127.0.0.1", port=5432, dbname=os.environ["POSTGRES_
 # Define a run id as uuid
 run_id = uuid.uuid4()
 
-# Define SQL query with placeholder values (%s)
-sql = """
-insert into landing.cheapshark_deals
-(run_id, request_url, request_params, http_status, fetched_at, payload, payload_hash)
-values (%s, %s, %s, %s, %s, %s, %s)
-"""
+deals_table = "landing.cheapshark_deals"
+stores_table = "landing.cheapshark_stores"
+
+def fetch(url, params = None, headers = headers):
+    max_attempts = 3
+    for attempt in range(max_attempts):
+        try:
+            r = requests.get(url, headers = headers, timeout = (5, 30), params = params)
+            if not (r.status_code >= 500 or r.status_code == 408) or attempt == (max_attempts - 1):
+                break  # 200, any other 4xx, or last attempt: keep this response
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            if attempt == (max_attempts - 1):  # No response to save, so give up
+                raise
+        time.sleep(5 * (attempt + 1))  # Waits 5 seconds, then 10
+
+    fetched_at = datetime.now(timezone.utc)
+    return r, fetched_at
+
+def save_response(table, r, fetched_at, params = None):
+    # Define SQL query with placeholder values (%s)
+    sql = f"""
+    insert into {table}
+    (run_id, request_url, request_params, http_status, fetched_at, payload, payload_hash)
+    values (%s, %s, %s, %s, %s, %s, %s)
+    """
+    if r.status_code == 200:
+        payload = Jsonb(r.json())
+        payload_hash = hashlib.sha256(r.content).hexdigest() # Hash of the content otherwise payload and the hash are None
+
+    else:
+        payload = None
+        payload_hash = None
+
+    conn.execute(sql, (run_id, r.url, Jsonb(params or {}), r.status_code, fetched_at, payload, payload_hash))
+    conn.commit()
+
+
 
 
 for s in stores:
@@ -52,31 +82,17 @@ for s in stores:
                       'storeID' : s,
                       'pageSize' : page_size
                     }
-            for attempt in range(3):
-                try:
-                    r = requests.get(url, headers=headers, timeout=(5, 30), params=params)
-                    if not (r.status_code >= 500 or r.status_code == 408) or attempt == 2:
-                        break  # 200, any other 4xx, or last attempt: keep this response
-                except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
-                    if attempt == 2:  # no response to save, give up
-                        raise
-                time.sleep(5 * (attempt + 1))  # Waits 5 seconds, then 10
-            fetched_at = datetime.now(timezone.utc)
-            if r.status_code == 200:
-                deals = r.json() # Define deals to not reparse json every time with r.json()
-                payload = Jsonb(deals)
-                payload_hash = hashlib.sha256(r.content).hexdigest() # Hash of the content otherwise payload and the hash are None
+            r, fetched_at = fetch(url, params, headers)
 
-            else:
-                payload = None
-                payload_hash = None
+            save_response(deals_table, r, fetched_at, params)
 
-            conn.execute(sql, (run_id, r.url, Jsonb(params), r.status_code, fetched_at, payload, payload_hash))
-            conn.commit()
-
-            # Repeat the if to break the loop, the first if is to save the results
+            # Stop the whole run on any non-200 response
             if r.status_code != 200:
                 sys.exit(f"store {s}, band {lower}-{upper}, page {p}: status {r.status_code}, run stopped")
+            
+            time.sleep(request_delay)
+            
+            deals = r.json()
 
             if len(deals) == 0:
                 print(f"store {s}, band {lower}-{upper}, page {p}: no deals")
@@ -85,8 +101,6 @@ for s in stores:
             print(f"store {s}, band {lower}-{upper}, page {p}: {len(deals)} deals, price {min(prices)}-{max(prices)}")
             if len(deals) < page_size: 
                 break
-            print(r.elapsed.total_seconds())
-            time.sleep(2)
         else:
             print(f"store {s}, band {lower}-{upper}: hit page 50, truncated")
 
@@ -95,38 +109,9 @@ for s in stores:
 
 url = 'https://www.cheapshark.com/api/1.0/stores'
 
-# Define SQL query with placeholder values (%s)
-sql = """
-insert into landing.cheapshark_stores
-(run_id, request_url, request_params, http_status, fetched_at, payload, payload_hash)
-values (%s, %s, %s, %s, %s, %s, %s)
-"""
+r, fetched_at = fetch(url, headers = headers)
 
-for attempt in range(3):
-    try:
-        r = requests.get(url, headers=headers, timeout=(5, 30))
-        if not (r.status_code >= 500 or r.status_code == 408) or attempt == 2:
-            break  # 200, any other 4xx, or last attempt: keep this response
-    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
-        if attempt == 2:  # No response to save, so give up
-            raise
-    time.sleep(5 * (attempt + 1))  # Waits 5 seconds, then 10
-
-fetched_at = datetime.now(timezone.utc)
-if r.status_code == 200:
-    stores_data = r.json() # define stores to not reparse json every time with r.json()
-    payload = Jsonb(stores_data)
-    payload_hash = hashlib.sha256(r.content).hexdigest() # Hash of the content otherwise payload and the hash are None
-    print(len(stores_data))
-    print(stores_data[0])
-else:
-    payload = None
-    payload_hash = None
-
-print(r.status_code)
-
-conn.execute(sql, (run_id, r.url, Jsonb({}), r.status_code, fetched_at, payload, payload_hash))
-conn.commit()
+save_response(stores_table, r, fetched_at)
 
 if r.status_code != 200:
     sys.exit(f"stores: status {r.status_code}, run stopped")
